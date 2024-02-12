@@ -12,28 +12,25 @@
 #include <errno.h>
 #include <signal.h>
 
-#define PARAM_NONE 0
-#define PARAM_A    1              //参数a
-#define PARAM_L    2              //参数l
-#define PARAM_I    4              //参数i
-#define PARAM_R    8              //参数r
-#define PARAM_T    16             //参数t
-#define PARAM_RR   32             //参数R
-#define PARAM_S    64             //参数s
-#define MAXROWLEN  155            //每行所用最大格数
-void ls();
+#define PARAM_a    1              //参数a
+#define PARAM_l    2              //参数l
+#define PARAM_i    4              //参数i
+#define PARAM_r    8              //参数r
+#define PARAM_t    16             //参数t
+#define PARAM_R    32             //参数R
+#define PARAM_s    64             //参数s
+
+void my_readdir(const char *path);
 int main(int argc,char*argv[])
 {
     int i, j, k, num;
     char*path=(char*)malloc(sizeof(char)*100);
-    char param[32];
-    int flag_param=PARAM_NONE;
-    struct stat buf;
+    char param[8];
+    int flag_param=0;
+    struct stat*buf;
 
     num=0;
     j=0;
-
-    signal(SIGINT,sighandler);
 
     for(i=1;i<argc;i++)
     {
@@ -51,31 +48,31 @@ int main(int argc,char*argv[])
     {
         if(param[i]=='a')
         {
-            flag_param|=PARAM_A;
+            flag_param|=PARAM_a;
         }
         else if(param[i]=='l')
         {
-            flag_param|=PARAM_L;
+            flag_param|=PARAM_l;
         }
         else if(param[i]=='R')
         {
-            flag_param|=PARAM_RR;
+            flag_param|=PARAM_R;
         }
         else if(param[i]=='r')
         {
-            flag_param|=PARAM_R;
+            flag_param|=PARAM_r;
         }
         else if(param[i]=='t')
         {
-            flag_param|=PARAM_T;
+            flag_param|=PARAM_t;
         }
         else if(param[i]=='i')
         {
-            flag_param|=PARAM_I;
+            flag_param|=PARAM_i;
         }
         else if(param[i]=='s')
         {
-            flag_param|=PARAM_S;
+            flag_param|=PARAM_s;
         }
     }
 
@@ -83,12 +80,14 @@ int main(int argc,char*argv[])
     {
         getcwd(path,100);
         display_dir(flag_param,path);
+        free(path);
 		return 0;
     }
     else
     {
         strcpy(path,argv[num+1]);
-        if(S_ISDIR(buf.st_mode))
+        stat(path,buf);
+        if(S_ISDIR(buf->st_mode))
         {
             display_dir(flag_param,path);
         }
@@ -96,6 +95,20 @@ int main(int argc,char*argv[])
         {
             display(flag_param,path);
         }
+        free(path);
         return 0;
     }
+}
+void my_readdir(const char *path)
+{
+    DIR*dir;
+    struct dirent*ptr=opendir(path);
+    while(ptr!=NULL)
+    {
+        if(ptr->d_name[0]!='.')
+        {
+            printf("%s ",ptr->d_name);
+        }
+    }
+    closedir(dir);
 }
