@@ -20,11 +20,14 @@
 #define PARAM_R    32             //参数R
 #define PARAM_s    64             //参数s
 
-void my_readdir(const char *path);
+void arr_file(int flag_param,char*path,char**filename);
+void display(int flag_param,char*path);
+int read_dir(const char *path,char**filename);
 int main(int argc,char*argv[])
 {
     int i, j, k, num;
     char*path=(char*)malloc(sizeof(char)*100);
+    char*filename[100]=(char**)malloc(sizeof(char*)*100);
     char param[8];
     int flag_param=0;
     struct stat*buf;
@@ -99,16 +102,78 @@ int main(int argc,char*argv[])
         return 0;
     }
 }
-void my_readdir(const char *path)
+int read_dir(const char *path,char**file)
 {
     DIR*dir;
     struct dirent*ptr=opendir(path);
+    int i=0;
     while(ptr!=NULL)
     {
-        if(ptr->d_name[0]!='.')
-        {
-            printf("%s ",ptr->d_name);
-        }
+        *file[i]=ptr->d_name;
+        i++;
     }
     closedir(dir);
+    return i;
+}
+void arr_file(int flag_param,char*path,char**filename)
+{
+    struct stat *buf;
+    __time_t filetime[100]=(__time_t*)malloc(sizeof(__time_t)*100);
+    int count=read_dir(path,filename);
+    if(flag_param&PARAM_t)
+    {
+        
+        for(int i=0;i<count;i++)
+        {
+            stat(filename[i],buf);
+            filetime[i]=buf->st_mtime;
+        }
+        for(int i=0;i<count;i++)
+        {
+            for(int j=i;j<count;j++)
+            {
+                if(filetime[i]<filetime[j])
+                {
+                    __time_t t=filetime[i];
+                    filetime[i]=filetime[j];
+                    filetime[j]=t;
+                    char*temp;
+                    strcpy(temp,filename[i]);
+                    strcpy(filename[i],filename[j]);
+                    strcpy(filename[j],temp);
+                }
+            }
+        }
+    }
+    else
+    {
+        for(int i=0;i<count;i++)
+		{
+			for(int j=i;j<count;j++)
+			{
+				if(strcmp(filename[i],filename[j])>0)
+				{
+                    char*temp;
+					strcpy(temp,filename[i]);
+					strcpy(filename[i],filename[j]);
+					strcpy(filename[j],temp);
+				}
+			}
+		}
+    }
+    if(flag_param&PARAM_r)
+    {
+        for(int i=0;i<count/2;i++)
+        {
+            char*temp;
+            strcpy(temp,filename[i]);
+            strcpy(filename[i],filename[count-1-i]);
+            strcpy(filename[count-1-i],temp);
+        }
+    }
+}
+
+void display(int flag_param,char*path)
+{
+
 }
