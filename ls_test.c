@@ -13,30 +13,29 @@
 #include <signal.h>
 
 #define PARAM_a    1              //参数a ok
-#define PARAM_l    2              //参数l
-#define PARAM_i    4              //参数i
+#define PARAM_l    2              //参数l ok
+#define PARAM_i    4              //参数i ok
 #define PARAM_r    8              //参数r ok
 #define PARAM_t    16             //参数t ok
 #define PARAM_R    32             //参数R
-#define PARAM_s    64             //参数s
+#define PARAM_s    64             //参数s ok
 
 void read_dir(int flag_param,const char *path,char**filename,int*count);
 void arr_file(int flag_param,char*path,char**filename,int*count);
-void display(int flag_param,char*path);
 void file_content(int flag_param,char*path,char**filename,int count);
 
 int main(int argc,char*argv[])
 {
-    int i,j,k,num,count;
-    char*path=(char*)malloc(sizeof(char)*100);
-    char*filename[100]=(char**)malloc(sizeof(char*)*100);
-    char param[8];
+    int i,j,k,num,count;//num为输入参数的数量，count为文件名的数量
+    char*path=(char*)malloc(sizeof(char)*100);//路径
+    char*filename[100]=(char**)malloc(sizeof(char*)*100);//文件名
+    char param[8];//输入的参数
     int flag_param=0;
     struct stat*buf;
 
     num=0;
     j=0;
-
+    //读取输入的参数
     for(i=1;i<argc;i++)
     {
         if(argv[i][0]=='-')
@@ -48,7 +47,7 @@ int main(int argc,char*argv[])
             num++;
         }
     }
-
+    //用特殊方法将输入的参数融入flag_param
     for(i=0;i<j;i++)
     {
         if(param[i]=='a')
@@ -80,31 +79,36 @@ int main(int argc,char*argv[])
             flag_param|=PARAM_s;
         }
     }
-
-    if(num+1==argc)
+    //判断参数是否含路径
+    if(num+1==argc)//不含则默认当前目录路径
     {
         getcwd(path,100);
         arr_file(flag_param,path,filename,&count);
+        file_content(flag_param,path,filename,count);
         free(path);
+        free(filename);
 		return 0;
     }
     else
     {
         strcpy(path,argv[num+1]);
         stat(path,buf);
+        //判断是否为目录
         if(S_ISDIR(buf->st_mode))
         {
             arr_file(flag_param,path,filename,&count);
+            file_content(flag_param,path,filename,count);
         }
         else
         {
             display(flag_param,path);
         }
         free(path);
+        free(filename);
         return 0;
     }
 }
-void read_dir(int flag_param,const char *path,char**filename,int*count)
+void read_dir(int flag_param,const char *path,char**filename,int*count)//读取目录，并判断了-a参数
 {
     DIR*dir;
     struct dirent*ptr=opendir(path);
@@ -136,11 +140,10 @@ void read_dir(int flag_param,const char *path,char**filename,int*count)
 void arr_file(int flag_param,char*path,char**filename,int*count)
 {
     struct stat *buf;
-    __time_t filetime[100]=(__time_t*)malloc(sizeof(__time_t)*100);
+    __time_t filetime[100]=(__time_t*)malloc(sizeof(__time_t)*100);//文件最后修改时间
     read_dir(flag_param,path,filename,count);
     if(flag_param&PARAM_t)
     {
-        
         for(int i=0;i<*count;i++)
         {
             stat(filename[i],buf);
@@ -198,7 +201,6 @@ void file_content(int flag_param,char*path,char**filename,int count)
 	struct passwd *psd;
 	struct group *grp;
     
-    
     if(flag_param&PARAM_l)
     {
         for(int i=0;i<count;i++)
@@ -212,7 +214,27 @@ void file_content(int flag_param,char*path,char**filename,int count)
             //文件大小
             if(flag_param&PARAM_s)
             {
-                printf("%2d ",);
+                int total=0;
+                if(flag_param&PARAM_a)
+                {
+                    for(i=0;i<count;i++)
+                    {
+                        stat(filename[i],buf);
+                        total=total+buf->st_blocks/2;
+                    }
+                }     
+                else
+                {
+                    for(i=0;i<count;i++)
+                    {
+                        stat(filename[i],buf);
+                        if(filename[i][2]!='.')
+                        {
+                            total=total+buf->st_blocks/2;
+                        }
+                    }
+                }
+                printf("%10d ",total);
             }
             //文件类型
             if(S_ISLNK(buf->st_mode)){
@@ -292,8 +314,11 @@ void file_content(int flag_param,char*path,char**filename,int count)
 	        printf(" %s\n", filename[i]);
         }
     }
-}
-void display(int flag_param,char*path)
-{
-
+    else
+    {
+        for(int i=0;i<count;i++)
+        {
+            printf("%s  ",filename[i]);
+        }
+    }
 }
