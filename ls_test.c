@@ -16,37 +16,46 @@
 #define PARAM_l    2              //参数l ok
 #define PARAM_i    4              //参数i ok
 #define PARAM_r    8              //参数r ok
-#define PARAM_t    16             //参数t ok
+#define PARAM_t    16             //参数t 
 #define PARAM_R    32             //参数R
 #define PARAM_s    64             //参数s ok
 
 void read_dir(int flag_param,const char *path,char**filename,int*count);
 void arr_file(int flag_param,char*path,char**filename,int*count);
+void arr_file_R(int flag_param,char*path,char**filename,int*count);
 void file_content(int flag_param,char*path,char**filename,int count);
 
 int main(int argc,char*argv[])
 {
     int i,j,k,num,count;//num为输入参数的数量，count为文件名的数量
     char*path=(char*)malloc(sizeof(char)*100);//路径
-    char*filename[100]=(char**)malloc(sizeof(char*)*100);//文件名
+    char*filename[100];//文件名
+    for(int i=0;i<100;i++)
+    {
+        filename[i]=(char*)malloc(sizeof(char)*100);
+    }
     char param[8];//输入的参数
     int flag_param=0;
-    struct stat*buf;
+    struct stat*buf=(struct stat*)malloc(sizeof(struct stat));
 
     num=0;
     j=0;
     //读取输入的参数
-    for(i=1;i<argc;i++)
+    if(argc>1)
     {
-        if(argv[i][0]=='-')
+        for(i=1;i<argc;i++)
         {
-            for(k=1;k<strlen(argv[i]);j++,k++)
+            if(argv[i][0]=='-')
             {
-                param[j]=argv[i][k];
+                for(k=1;k<strlen(argv[i]);j++,k++)
+                {
+                    param[j]=argv[i][k];
+                }
+                num++;
             }
-            num++;
         }
     }
+    
     //用特殊方法将输入的参数融入flag_param
     for(i=0;i<j;i++)
     {
@@ -83,11 +92,9 @@ int main(int argc,char*argv[])
     if(num+1==argc)//不含则默认当前目录路径
     {
         getcwd(path,100);
+        read_dir(flag_param,path,filename,&count);
         arr_file(flag_param,path,filename,&count);
         file_content(flag_param,path,filename,count);
-        free(path);
-        free(filename);
-		return 0;
     }
     else
     {
@@ -96,29 +103,39 @@ int main(int argc,char*argv[])
         //判断是否为目录
         if(S_ISDIR(buf->st_mode))
         {
+            read_dir(flag_param,path,filename,&count);
             arr_file(flag_param,path,filename,&count);
             file_content(flag_param,path,filename,count);
         }
-        else
+        /*else
         {
             display(flag_param,path);
-        }
-        free(path);
-        free(filename);
-        return 0;
+        }*/
     }
+    free(path);
+    free(buf);
+    for(int i=0;i<100;i++)
+    {
+        free(filename[i]);
+    }
+	return 0;
 }
 void read_dir(int flag_param,const char *path,char**filename,int*count)//读取目录，并判断了-a参数
 {
-    DIR*dir;
-    struct dirent*ptr=opendir(path);
+    DIR*dir=opendir(path);
+    if(dir==NULL){
+        perror("opendir");
+        exit(EXIT_FAILURE);
+    }
+    struct dirent*ptr=readdir(dir);
     int i=0;
     if(flag_param&PARAM_a)
     {
         while(ptr!=NULL)
         {
-            *filename[i]=ptr->d_name;
+            strcpy(filename[i],ptr->d_name);
             i++;
+            ptr=readdir(dir);
         }
         closedir(dir);
         *count=i;
@@ -129,9 +146,10 @@ void read_dir(int flag_param,const char *path,char**filename,int*count)//读取�
         {
             if(ptr->d_name[0]!='.')
             {
-                *filename[i]=ptr->d_name;
+                strcpy(filename[i],ptr->d_name);
                 i++;
             }
+            ptr=readdir(dir);
         }
         closedir(dir);
         *count=i;
@@ -139,15 +157,15 @@ void read_dir(int flag_param,const char *path,char**filename,int*count)//读取�
 }
 void arr_file(int flag_param,char*path,char**filename,int*count)
 {
-    struct stat *buf;
-    __time_t filetime[100]=(__time_t*)malloc(sizeof(__time_t)*100);//文件最后修改时间
-    read_dir(flag_param,path,filename,count);
+    struct stat *buf=(struct stat*)malloc(sizeof(struct stat));
+    long **filetime = (long **)malloc(sizeof(long*)*100);//文件最后修改时间
     if(flag_param&PARAM_t)
     {
         for(int i=0;i<*count;i++)
         {
+            filetime[i]=(long*)malloc(sizeof(long));
             stat(filename[i],buf);
-            filetime[i]=buf->st_mtime;
+            filetime[i][0]=buf->st_mtime;
         }
         for(int i=0;i<*count;i++)
         {
@@ -155,10 +173,10 @@ void arr_file(int flag_param,char*path,char**filename,int*count)
             {
                 if(filetime[i]<filetime[j])
                 {
-                    __time_t t=filetime[i];
-                    filetime[i]=filetime[j];
-                    filetime[j]=t;
-                    char*temp;
+                    long t=filetime[i][0];
+                    filetime[i][0]=filetime[j][0];
+                    filetime[j][0]=t;
+                    char temp[100];
                     strcpy(temp,filename[i]);
                     strcpy(filename[i],filename[j]);
                     strcpy(filename[j],temp);
@@ -174,7 +192,7 @@ void arr_file(int flag_param,char*path,char**filename,int*count)
 			{
 				if(strcmp(filename[i],filename[j])>0)
 				{
-                    char*temp;
+                    char temp[100];
 					strcpy(temp,filename[i]);
 					strcpy(filename[i],filename[j]);
 					strcpy(filename[j],temp);
@@ -186,55 +204,79 @@ void arr_file(int flag_param,char*path,char**filename,int*count)
     {
         for(int i=0;i<*count/2;i++)
         {
-            char*temp;
+            char temp[100];
             strcpy(temp,filename[i]);
             strcpy(filename[i],filename[*count-1-i]);
             strcpy(filename[*count-1-i],temp);
         }
     }
+    free(buf);
+    if(flag_param&PARAM_t)
+    {
+        for(int i=0;i<*count;i++)
+        {
+            free(filetime[i]);
+        } 
+    }
+    free(filetime);
+}
+void arr_file_R(int flag_param,char*path,char**filename,int*count)
+{
+    // if(flag_param&PARAM_R)
+    // {
+    //     printf("%s\n",path);
+    //     file_content(flag_param,path,filename,count);
+        
+    //     for(int i=0;i<*count;i++)
+    //     {
+
+    //     }
+    // }
 }
 void file_content(int flag_param,char*path,char**filename,int count)
 {
     char colorname[NAME_MAX + 30];
-    struct stat*buf;
-    char buf_time[32];
+    struct stat*buf=(struct stat*)malloc(sizeof(struct stat));
+    char buf_time[64];
 	struct passwd *psd;
 	struct group *grp;
     
     if(flag_param&PARAM_l)
     {
+        //文件总大小
+        int total=0;
+        if(flag_param&PARAM_a)
+        {
+            for(int i=0;i<count;i++)
+            {
+                stat(filename[i],buf);
+                total=total+buf->st_blocks/2;
+            }
+        }     
+        else
+        {
+            for(int i=0;i<count;i++)
+            {
+                stat(filename[i],buf);
+                if(filename[i][2]!='.')
+                {
+                    total=total+buf->st_blocks/2;
+                }
+            }
+        }
+        printf("总计 %-10d\n",total);
         for(int i=0;i<count;i++)
         {
             stat(filename[i],buf);
             //索引信息
             if(flag_param&PARAM_i)
             {
-                printf("%d ",buf->st_ino);
+                printf("%ld ",buf->st_ino);
             }
             //文件大小
             if(flag_param&PARAM_s)
             {
-                int total=0;
-                if(flag_param&PARAM_a)
-                {
-                    for(i=0;i<count;i++)
-                    {
-                        stat(filename[i],buf);
-                        total=total+buf->st_blocks/2;
-                    }
-                }     
-                else
-                {
-                    for(i=0;i<count;i++)
-                    {
-                        stat(filename[i],buf);
-                        if(filename[i][2]!='.')
-                        {
-                            total=total+buf->st_blocks/2;
-                        }
-                    }
-                }
-                printf("%10d ",total);
+                printf("%2ld ",buf->st_blocks/2);
             }
             //文件类型
             if(S_ISLNK(buf->st_mode)){
@@ -296,18 +338,17 @@ void file_content(int flag_param,char*path,char**filename,int count)
 	        	printf("x");
 	        else 
 	        	printf("-");
-
-            printf("\t");
+            
             //通过用户和组id得到用户的信息和其所在组的信息
-            psd = getpwuid(buf->st_uid);
-	        grp = getgrgid(buf->st_gid);
+            psd=getpwuid(buf->st_uid);//这里为什么会有空指针？
+	        grp=getgrgid(buf->st_gid);
  
-	        printf("%4d ",buf->st_nlink);    //打印文件的硬链接数
+	        printf("%3ld ",buf->st_nlink);    //打印文件的硬链接数
 	        printf("%-8s",psd->pw_name);    //打印用户的名字
 	        printf("%-8s", grp->gr_name);   //打印用户组的名字
 
-	        printf("%6d", buf->st_size);     //打印文件大小
-	        strcpy(buf_time,ctime(buf->st_mtime));//把时间转换成普通表示格式
+	        printf("%6ld", buf->st_size);     //打印文件大小
+	        strcpy(buf_time,ctime(&buf->st_mtime));//把时间转换成普通表示格式
  
 	        buf_time[strlen(buf_time)-1]='\0';    //去掉换行符
 	        printf("  %s", buf_time);//输出时间 
@@ -316,9 +357,45 @@ void file_content(int flag_param,char*path,char**filename,int count)
     }
     else
     {
+        if(flag_param&PARAM_s)
+        {
+            int total=0;
+            if(flag_param&PARAM_a)
+            {
+                for(int i=0;i<count;i++)
+                {
+                    stat(filename[i],buf);
+                    total=total+buf->st_blocks/2;
+                }
+            }     
+            else
+            {
+                for(int i=0;i<count;i++)
+                {
+                    stat(filename[i],buf);
+                    if(filename[i][2]!='.')
+                    {
+                        total=total+buf->st_blocks/2;
+                    }
+                }
+            }
+            printf("总计 %-10d\n",total);
+        }
         for(int i=0;i<count;i++)
         {
-            printf("%s  ",filename[i]);
+            stat(filename[i],buf);
+            //索引信息
+            if(flag_param&PARAM_i)
+            {
+                printf("%ld ",buf->st_ino);
+            }
+            //文件大小
+            if(flag_param&PARAM_s)
+            {
+                printf("%2ld ",buf->st_blocks/2);
+            }
+            printf("%s ",filename[i]);
         }
     }
+    free(buf);
 }
