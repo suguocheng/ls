@@ -13,7 +13,7 @@
 #include <signal.h>
 
 #define PARAM_a    1              //参数a ok
-#define PARAM_l    2              //参数l ok
+#define PARAM_l    2              //参数l 
 #define PARAM_i    4              //参数i ok
 #define PARAM_r    8              //参数r ok
 #define PARAM_t    16             //参数t 
@@ -94,6 +94,7 @@ int main(int argc,char*argv[])
         getcwd(path,100);
         read_dir(flag_param,path,filename,&count);
         arr_file(flag_param,path,filename,&count);
+        arr_file_R(flag_param,path,filename,&count);
         file_content(flag_param,path,filename,count);
     }
     else
@@ -105,6 +106,7 @@ int main(int argc,char*argv[])
         {
             read_dir(flag_param,path,filename,&count);
             arr_file(flag_param,path,filename,&count);
+            arr_file_R(flag_param,path,filename,&count);
             file_content(flag_param,path,filename,count);
         }
         /*else
@@ -158,14 +160,13 @@ void read_dir(int flag_param,const char *path,char**filename,int*count)//读取�
 void arr_file(int flag_param,char*path,char**filename,int*count)
 {
     struct stat *buf=(struct stat*)malloc(sizeof(struct stat));
-    long **filetime = (long **)malloc(sizeof(long*)*100);//文件最后修改时间
+    long *filetime = (long *)malloc(sizeof(long)*100);//文件最后修改时间
     if(flag_param&PARAM_t)
     {
         for(int i=0;i<*count;i++)
         {
-            filetime[i]=(long*)malloc(sizeof(long));
             stat(filename[i],buf);
-            filetime[i][0]=buf->st_mtime;
+            filetime[i]=buf->st_mtime;
         }
         for(int i=0;i<*count;i++)
         {
@@ -173,9 +174,9 @@ void arr_file(int flag_param,char*path,char**filename,int*count)
             {
                 if(filetime[i]<filetime[j])
                 {
-                    long t=filetime[i][0];
-                    filetime[i][0]=filetime[j][0];
-                    filetime[j][0]=t;
+                    long t=filetime[i];
+                    filetime[i]=filetime[j];
+                    filetime[j]=t;
                     char temp[100];
                     strcpy(temp,filename[i]);
                     strcpy(filename[i],filename[j]);
@@ -211,27 +212,29 @@ void arr_file(int flag_param,char*path,char**filename,int*count)
         }
     }
     free(buf);
-    if(flag_param&PARAM_t)
-    {
-        for(int i=0;i<*count;i++)
-        {
-            free(filetime[i]);
-        } 
-    }
     free(filetime);
 }
 void arr_file_R(int flag_param,char*path,char**filename,int*count)
 {
-    // if(flag_param&PARAM_R)
-    // {
-    //     printf("%s\n",path);
-    //     file_content(flag_param,path,filename,count);
+    if(flag_param&PARAM_R)
+    {
+        struct stat*buf=(struct stat*)malloc(sizeof(struct stat));
+        printf("%s:\n",path);
         
-    //     for(int i=0;i<*count;i++)
-    //     {
-
-    //     }
-    // }
+        printf("\n");
+        for(int i=0;i<*count;i++)
+        {
+            lstat(filename[i],buf);
+            if(S_ISDIR(buf->st_mode))
+            {
+                strcat(path,"/");
+                strcat(path,filename[i]);
+                read_dir(flag_param,path,filename,count);
+                arr_file_R(flag_param,path,filename,count);
+            }
+        }
+        free(buf);
+    }
 }
 void file_content(int flag_param,char*path,char**filename,int count)
 {
@@ -258,7 +261,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
             for(int i=0;i<count;i++)
             {
                 stat(filename[i],buf);
-                if(filename[i][2]!='.')
+                if(filename[i][0]!='.')
                 {
                     total=total+buf->st_blocks/2;
                 }
@@ -343,11 +346,11 @@ void file_content(int flag_param,char*path,char**filename,int count)
             psd=getpwuid(buf->st_uid);//这里为什么会有空指针？
 	        grp=getgrgid(buf->st_gid);
  
-	        printf("%3ld ",buf->st_nlink);    //打印文件的硬链接数
+	        printf("%4ld ",buf->st_nlink);    //打印文件的硬链接数
 	        printf("%-8s",psd->pw_name);    //打印用户的名字
 	        printf("%-8s", grp->gr_name);   //打印用户组的名字
 
-	        printf("%6ld", buf->st_size);     //打印文件大小
+	        printf("%8ld", buf->st_size);     //打印文件大小
 	        strcpy(buf_time,ctime(&buf->st_mtime));//把时间转换成普通表示格式
  
 	        buf_time[strlen(buf_time)-1]='\0';    //去掉换行符
