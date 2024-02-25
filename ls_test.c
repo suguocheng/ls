@@ -11,12 +11,13 @@
 #include <pwd.h>
 #include <errno.h>
 #include <signal.h>
+#include <limits.h>
 
 #define PARAM_a    1              //参数a ok
 #define PARAM_l    2              //参数l 
 #define PARAM_i    4              //参数i ok
 #define PARAM_r    8              //参数r ok
-#define PARAM_t    16             //参数t 
+#define PARAM_t    16             //参数t ok
 #define PARAM_R    32             //参数R
 #define PARAM_s    64             //参数s ok
 
@@ -220,7 +221,7 @@ void arr_file_R(int flag_param,char*path,char**filename,int*count)
     {
         struct stat*buf=(struct stat*)malloc(sizeof(struct stat));
         printf("%s:\n",path);
-        
+        file_content(flag_param,path,filename,*count);
         printf("\n");
         for(int i=0;i<*count;i++)
         {
@@ -243,6 +244,17 @@ void file_content(int flag_param,char*path,char**filename,int count)
     char buf_time[64];
 	struct passwd *psd;
 	struct group *grp;
+    char *absolute_path[100];
+    for(int i=0;i<100;i++)
+    {
+        absolute_path[i]=(char*)malloc(sizeof(char)*100);
+    }
+
+    // 将相对文件名转换为绝对文件名
+    for(int i=0;i<count;i++)
+    {
+        realpath(filename[i],absolute_path[i]);
+    }
     
     if(flag_param&PARAM_l)
     {
@@ -252,7 +264,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
         {
             for(int i=0;i<count;i++)
             {
-                stat(filename[i],buf);
+                stat(absolute_path[i],buf);
                 total=total+buf->st_blocks/2;
             }
         }     
@@ -260,7 +272,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
         {
             for(int i=0;i<count;i++)
             {
-                stat(filename[i],buf);
+                stat(absolute_path[i],buf);
                 if(filename[i][0]!='.')
                 {
                     total=total+buf->st_blocks/2;
@@ -268,9 +280,14 @@ void file_content(int flag_param,char*path,char**filename,int count)
             }
         }
         printf("总计 %-10d\n",total);
+
         for(int i=0;i<count;i++)
         {
-            stat(filename[i],buf);
+            printf("%s",absolute_path[i]);
+            if (stat(absolute_path[i],buf)!=0)
+            {
+                printf("无法获取文件信息：%s\n", strerror(errno));
+            }
             //索引信息
             if(flag_param&PARAM_i)
             {
@@ -401,4 +418,8 @@ void file_content(int flag_param,char*path,char**filename,int count)
         }
     }
     free(buf);
+    for(int i=0;i<100;i++)
+    {
+        free(absolute_path[i]);
+    }
 }
