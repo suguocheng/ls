@@ -11,7 +11,6 @@
 #include <pwd.h>
 #include <errno.h>
 #include <signal.h>
-#include <limits.h>
 
 #define PARAM_a    1              //参数a ok
 #define PARAM_l    2              //参数l 
@@ -162,11 +161,24 @@ void arr_file(int flag_param,char*path,char**filename,int*count)
 {
     struct stat *buf=(struct stat*)malloc(sizeof(struct stat));
     long *filetime = (long *)malloc(sizeof(long)*100);//文件最后修改时间
+    char *absolute_path[100];
+    for(int i=0;i<100;i++)
+    {
+        absolute_path[i]=(char*)malloc(sizeof(char)*100);
+    }
+    // 将相对文件名转换为绝对文件名
+    for(int i=0;i<*count;i++)
+    {
+        strcpy(absolute_path[i],path);
+        strcat(absolute_path[i],"/");
+        strcat(absolute_path[i],filename[i]);
+    }
+
     if(flag_param&PARAM_t)
     {
         for(int i=0;i<*count;i++)
         {
-            stat(filename[i],buf);
+            stat(absolute_path[i],buf);
             filetime[i]=buf->st_mtime;
         }
         for(int i=0;i<*count;i++)
@@ -253,7 +265,9 @@ void file_content(int flag_param,char*path,char**filename,int count)
     // 将相对文件名转换为绝对文件名
     for(int i=0;i<count;i++)
     {
-        realpath(filename[i],absolute_path[i]);
+        strcpy(absolute_path[i],path);
+        strcat(absolute_path[i],"/");
+        strcat(absolute_path[i],filename[i]);
     }
     
     if(flag_param&PARAM_l)
@@ -283,11 +297,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
 
         for(int i=0;i<count;i++)
         {
-            printf("%s",absolute_path[i]);
-            if (stat(absolute_path[i],buf)!=0)
-            {
-                printf("无法获取文件信息：%s\n", strerror(errno));
-            }
+            stat(absolute_path[i],buf);
             //索引信息
             if(flag_param&PARAM_i)
             {
@@ -367,7 +377,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
 	        printf("%-8s",psd->pw_name);    //打印用户的名字
 	        printf("%-8s", grp->gr_name);   //打印用户组的名字
 
-	        printf("%8ld", buf->st_size);     //打印文件大小
+	        printf("%10ld", buf->st_size);     //打印文件大小
 	        strcpy(buf_time,ctime(&buf->st_mtime));//把时间转换成普通表示格式
  
 	        buf_time[strlen(buf_time)-1]='\0';    //去掉换行符
