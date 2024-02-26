@@ -95,7 +95,6 @@ int main(int argc,char*argv[])
         read_dir(flag_param,path,filename,&count);
         arr_file(flag_param,path,filename,&count);
         arr_file_R(flag_param,path,filename,&count);
-        file_content(flag_param,path,filename,count);
     }
     else
     {
@@ -107,7 +106,6 @@ int main(int argc,char*argv[])
             read_dir(flag_param,path,filename,&count);
             arr_file(flag_param,path,filename,&count);
             arr_file_R(flag_param,path,filename,&count);
-            file_content(flag_param,path,filename,count);
         }
         /*else
         {
@@ -178,7 +176,7 @@ void arr_file(int flag_param,char*path,char**filename,int*count)
     {
         for(int i=0;i<*count;i++)
         {
-            stat(absolute_path[i],buf);
+            lstat(absolute_path[i],buf);
             filetime[i]=buf->st_mtime;
         }
         for(int i=0;i<*count;i++)
@@ -226,27 +224,52 @@ void arr_file(int flag_param,char*path,char**filename,int*count)
     }
     free(buf);
     free(filetime);
+    for(int i=0;i<100;i++)
+    {
+        free(absolute_path[i]);
+    }
 }
 void arr_file_R(int flag_param,char*path,char**filename,int*count)
 {
+    char *absolute_path[100];
+    for(int i=0;i<100;i++)
+    {
+        absolute_path[i]=(char*)malloc(sizeof(char)*100);
+    }
+    // 将相对文件名转换为绝对文件名
+    for(int i=0;i<*count;i++)
+    {
+        strcpy(absolute_path[i],path);
+        strcat(absolute_path[i],"/");
+        strcat(absolute_path[i],filename[i]);
+    }
+
     if(flag_param&PARAM_R)
     {
         struct stat*buf=(struct stat*)malloc(sizeof(struct stat));
         printf("%s:\n",path);
         file_content(flag_param,path,filename,*count);
-        printf("\n");
+        printf("\n\n");
         for(int i=0;i<*count;i++)
         {
-            lstat(filename[i],buf);
+            lstat(absolute_path[i],buf);
             if(S_ISDIR(buf->st_mode))
             {
-                strcat(path,"/");
-                strcat(path,filename[i]);
+                strcpy(path,absolute_path[i]);
                 read_dir(flag_param,path,filename,count);
+                arr_file(flag_param,path,filename,count);
                 arr_file_R(flag_param,path,filename,count);
             }
         }
         free(buf);
+    }
+    else
+    {
+        file_content(flag_param,path,filename,*count);
+    }
+    for(int i=0;i<100;i++)
+    {
+        free(absolute_path[i]);
     }
 }
 void file_content(int flag_param,char*path,char**filename,int count)
@@ -278,7 +301,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
         {
             for(int i=0;i<count;i++)
             {
-                stat(absolute_path[i],buf);
+                lstat(absolute_path[i],buf);
                 total=total+buf->st_blocks/2;
             }
         }     
@@ -286,7 +309,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
         {
             for(int i=0;i<count;i++)
             {
-                stat(absolute_path[i],buf);
+                lstat(absolute_path[i],buf);
                 if(filename[i][0]!='.')
                 {
                     total=total+buf->st_blocks/2;
@@ -297,7 +320,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
 
         for(int i=0;i<count;i++)
         {
-            stat(absolute_path[i],buf);
+            lstat(absolute_path[i],buf);
             //索引信息
             if(flag_param&PARAM_i)
             {
@@ -306,7 +329,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
             //文件大小
             if(flag_param&PARAM_s)
             {
-                printf("%2ld ",buf->st_blocks/2);
+                printf("%7ld ",buf->st_blocks/2);
             }
             //文件类型
             if(S_ISLNK(buf->st_mode)){
@@ -394,7 +417,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
             {
                 for(int i=0;i<count;i++)
                 {
-                    stat(filename[i],buf);
+                    lstat(absolute_path[i],buf);
                     total=total+buf->st_blocks/2;
                 }
             }     
@@ -402,7 +425,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
             {
                 for(int i=0;i<count;i++)
                 {
-                    stat(filename[i],buf);
+                    lstat(absolute_path[i],buf);
                     if(filename[i][2]!='.')
                     {
                         total=total+buf->st_blocks/2;
@@ -413,7 +436,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
         }
         for(int i=0;i<count;i++)
         {
-            stat(filename[i],buf);
+            lstat(absolute_path[i],buf);
             //索引信息
             if(flag_param&PARAM_i)
             {
