@@ -13,7 +13,7 @@
 #include <signal.h>
 
 #define PARAM_a    1              //参数a ok
-#define PARAM_l    2              //参数l 
+#define PARAM_l    2              //参数l ok
 #define PARAM_i    4              //参数i ok
 #define PARAM_r    8              //参数r ok
 #define PARAM_t    16             //参数t ok
@@ -28,9 +28,9 @@ void file_content(int flag_param,char*path,char**filename,int count);
 int main(int argc,char*argv[])
 {
     int i,j,k,num,count;//num为输入参数的数量，count为文件名的数量
-    char*path=(char*)malloc(sizeof(char)*100);//路径
-    char*filename[100];//文件名
-    for(int i=0;i<100;i++)
+    char*path=(char*)malloc(sizeof(char)*300);//路径
+    char*filename[2000];//文件名
+    for(int i=0;i<2000;i++)
     {
         filename[i]=(char*)malloc(sizeof(char)*100);
     }
@@ -91,7 +91,7 @@ int main(int argc,char*argv[])
     //判断参数是否含路径
     if(num+1==argc)//不含则默认当前目录路径
     {
-        getcwd(path,100);
+        getcwd(path,300);
         read_dir(flag_param,path,filename,&count);
         arr_file(flag_param,path,filename,&count);
         arr_file_R(flag_param,path,filename,&count);
@@ -114,11 +114,67 @@ int main(int argc,char*argv[])
     }
     free(path);
     free(buf);
-    for(int i=0;i<100;i++)
+    for(int i=0;i<2000;i++)
     {
         free(filename[i]);
     }
 	return 0;
+}
+void arr_file_R(int flag_param,char*path,char**filename,int*count)
+{
+    char *absolute_path[2000];
+    for(int i=0;i<2000;i++)
+    {
+        absolute_path[i]=(char*)malloc(sizeof(char)*300);
+    }
+    // 将相对文件名转换为绝对文件名
+    for(int i=0;i<*count;i++)
+    {
+        strcpy(absolute_path[i],path);
+        strcat(absolute_path[i],"/");
+        strcat(absolute_path[i],filename[i]);    
+    }
+        // printf("%d\nabsolute_path:\n",*count);
+        // for(int i=0;i<*count;i++)
+        // {
+        //     printf("%s\n",absolute_path[i]);
+        // }
+        // printf("filename:\n");
+        // for(int i=0;i<*count;i++)
+        // {
+        //     printf("%s\n",filename[i]);
+        // }
+        // printf("path:%s\n",path);
+
+    if(flag_param&PARAM_R)
+    {
+        struct stat*buf=(struct stat*)malloc(sizeof(struct stat));
+        printf("%s:\n",path);
+        file_content(flag_param,path,filename,*count);
+        printf("\n\n");
+        for(int i=0;i<*count;i++)
+        {
+            lstat(absolute_path[i],buf);
+            if(S_ISDIR(buf->st_mode))
+            {
+                read_dir(flag_param,path,filename,count);
+                arr_file(flag_param,path,filename,count);
+                if(strcmp(filename[i],".")!=0&&strcmp(filename[i],"..")!=0)
+                {
+                    arr_file_R(flag_param,absolute_path[i],filename,count);
+                }
+            }
+        }
+        free(buf);
+    }
+    else
+    {
+        file_content(flag_param,path,filename,*count);
+    }
+    for(int i=0;i<2000;i++)
+    {
+        free(absolute_path[i]);
+    }
 }
 void read_dir(int flag_param,const char *path,char**filename,int*count)//读取目录，并判断了-a参数
 {
@@ -158,11 +214,11 @@ void read_dir(int flag_param,const char *path,char**filename,int*count)//读取�
 void arr_file(int flag_param,char*path,char**filename,int*count)
 {
     struct stat *buf=(struct stat*)malloc(sizeof(struct stat));
-    long *filetime = (long *)malloc(sizeof(long)*100);//文件最后修改时间
-    char *absolute_path[100];
-    for(int i=0;i<100;i++)
+    long *filetime = (long *)malloc(sizeof(long)*2000);//文件最后修改时间
+    char *absolute_path[2000];
+    for(int i=0;i<2000;i++)
     {
-        absolute_path[i]=(char*)malloc(sizeof(char)*100);
+        absolute_path[i]=(char*)malloc(sizeof(char)*300);
     }
     // 将相对文件名转换为绝对文件名
     for(int i=0;i<*count;i++)
@@ -224,65 +280,21 @@ void arr_file(int flag_param,char*path,char**filename,int*count)
     }
     free(buf);
     free(filetime);
-    for(int i=0;i<100;i++)
-    {
-        free(absolute_path[i]);
-    }
-}
-void arr_file_R(int flag_param,char*path,char**filename,int*count)
-{
-    char *absolute_path[100];
-    for(int i=0;i<100;i++)
-    {
-        absolute_path[i]=(char*)malloc(sizeof(char)*100);
-    }
-    // 将相对文件名转换为绝对文件名
-    for(int i=0;i<*count;i++)
-    {
-        strcpy(absolute_path[i],path);
-        strcat(absolute_path[i],"/");
-        strcat(absolute_path[i],filename[i]);
-    }
-
-    if(flag_param&PARAM_R)
-    {
-        struct stat*buf=(struct stat*)malloc(sizeof(struct stat));
-        printf("%s:\n",path);
-        file_content(flag_param,path,filename,*count);
-        printf("\n\n");
-        for(int i=0;i<*count;i++)
-        {
-            lstat(absolute_path[i],buf);
-            if(S_ISDIR(buf->st_mode))
-            {
-                strcpy(path,absolute_path[i]);
-                read_dir(flag_param,path,filename,count);
-                arr_file(flag_param,path,filename,count);
-                arr_file_R(flag_param,path,filename,count);
-            }
-        }
-        free(buf);
-    }
-    else
-    {
-        file_content(flag_param,path,filename,*count);
-    }
-    for(int i=0;i<100;i++)
+    for(int i=0;i<2000;i++)
     {
         free(absolute_path[i]);
     }
 }
 void file_content(int flag_param,char*path,char**filename,int count)
 {
-    char colorname[NAME_MAX + 30];
     struct stat*buf=(struct stat*)malloc(sizeof(struct stat));
     char buf_time[64];
 	struct passwd *psd;
 	struct group *grp;
-    char *absolute_path[100];
-    for(int i=0;i<100;i++)
+    char *absolute_path[2000];
+    for(int i=0;i<2000;i++)
     {
-        absolute_path[i]=(char*)malloc(sizeof(char)*100);
+        absolute_path[i]=(char*)malloc(sizeof(char)*300);
     }
 
     // 将相对文件名转换为绝对文件名
@@ -393,14 +405,14 @@ void file_content(int flag_param,char*path,char**filename,int count)
 	        	printf("-");
             
             //通过用户和组id得到用户的信息和其所在组的信息
-            psd=getpwuid(buf->st_uid);//这里为什么会有空指针？
+            psd=getpwuid(buf->st_uid);
 	        grp=getgrgid(buf->st_gid);
  
 	        printf("%4ld ",buf->st_nlink);    //打印文件的硬链接数
-	        printf("%-8s",psd->pw_name);    //打印用户的名字
-	        printf("%-8s", grp->gr_name);   //打印用户组的名字
+	        printf("%-17s",psd->pw_name);    //打印用户的名字
+	        printf("%-17s", grp->gr_name);   //打印用户组的名字
 
-	        printf("%10ld", buf->st_size);     //打印文件大小
+	        printf("%15ld", buf->st_size);     //打印文件大小
 	        strcpy(buf_time,ctime(&buf->st_mtime));//把时间转换成普通表示格式
  
 	        buf_time[strlen(buf_time)-1]='\0';    //去掉换行符
@@ -451,7 +463,7 @@ void file_content(int flag_param,char*path,char**filename,int count)
         }
     }
     free(buf);
-    for(int i=0;i<100;i++)
+    for(int i=0;i<2000;i++)
     {
         free(absolute_path[i]);
     }
