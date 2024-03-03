@@ -18,7 +18,7 @@ typedef struct
     struct stat fileinfo;//文件信息
 }File;//存储文件名和文件信息的结构体
 
-#define FILECOUNT_MAX 2000        //文件数最大值
+#define FILECOUNT_MAX 10000        //文件数最大值
 #define PATHNAME_MAX  200         //路径名最大长度
 #define PARAM_a       1           //参数a ok
 #define PARAM_l       2           //参数l 
